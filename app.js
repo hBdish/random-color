@@ -1,85 +1,41 @@
-const cols = document.querySelectorAll(".col");
+var createError = require('http-errors');
+var express = require('express');
+var path = require('path');
+var cookieParser = require('cookie-parser');
+var logger = require('morgan');
 
-document.addEventListener("keydown", (event) => {
-  event.preventDefault();
-  if (event.code.toLowerCase() === "space") {
-    setRandomColors();
-  }
+var indexRouter = require('./routes/index');
+var usersRouter = require('./routes/users');
+
+var app = express();
+
+// view engine setup
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'ejs');
+
+app.use(logger('dev'));
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.use('/', indexRouter);
+app.use('/users', usersRouter);
+
+// catch 404 and forward to error handler
+app.use(function(req, res, next) {
+  next(createError(404));
 });
 
-document.addEventListener("click", (event) => {
-  const type = event.target.dataset.type;
-  if (type === "lock") {
-    const node =
-      event.target.tagName.toLowerCase() === "i"
-        ? event.target
-        : event.target.children[0];
+// error handler
+app.use(function(err, req, res, next) {
+  // set locals, only providing error in development
+  res.locals.message = err.message;
+  res.locals.error = req.app.get('env') === 'development' ? err : {};
 
-    if (node.textContent === "block") {
-      node.textContent = "expand_circle_down";
-    } else {
-      node.textContent = "block";
-    }
-  } else if (type === "copy") {
-    copyToClick(event.target.textContent);
-  }
+  // render the error page
+  res.status(err.status || 500);
+  res.render('error');
 });
 
-function setRandomColors(isInitial) {
-  const colors = isInitial ? getColorsFromHash() : [];
-
-  cols.forEach((col, index) => {
-    const isLocked = col.querySelector("i").textContent === "block";
-    console.log(isLocked);
-    const text = col.querySelector("h2");
-    const button = col.querySelector("button");
-
-    if (isLocked) {
-      colors.push(text.textContent);
-      return;
-    }
-
-    const color = isInitial
-      ? colors[index]
-        ? colors[index]
-        : chroma.random()
-      : chroma.random();
-    if (!isInitial) {
-      colors.push(color);
-    }
-
-    text.textContent = color;
-    col.style.background = color;
-    setTextColor(text, color);
-    setTextColor(button, color);
-  });
-
-  updateColorsHash(colors);
-}
-
-function setTextColor(text, color) {
-  const luminance = chroma(color).luminance();
-  text.style.color = luminance > 0.5 ? "black" : "white";
-}
-
-function copyToClick(text) {
-  return navigator.clipboard.writeText(text);
-}
-
-function updateColorsHash(color = []) {
-  document.location.hash = color
-    .map((col) => col.toString().substring(1))
-    .join("-");
-}
-
-function getColorsFromHash() {
-  if (document.location.hash.length > 1) {
-    return document.location.hash
-      .substring(1)
-      .split("-")
-      .map((col) => "#" + col);
-  }
-  return [];
-}
-
-setRandomColors(true);
+module.exports = app;
